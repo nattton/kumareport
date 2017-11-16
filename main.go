@@ -14,9 +14,9 @@ import (
 
 const authKey = "bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1bmlxdWVfbmFtZSI6ImY3MTgyM2UzLWJhOGMtNGMwNi05ODkzLTA0MDgzMzJhNDA1NSIsInN1YiI6ImJvb2t6eUBhbnlwYXkuY28udGgiLCJlbWFpbCI6ImJvb2t6eUBhbnlwYXkuY28udGgiLCJyb2xlIjoiQU5ZUEFfV0VCIiwiaXNzIjoiYXV0aC5hbnlwYXkuY28udGgiLCJhdWQiOiI2ODViZDg0MmY3ZDQ0NmU2OWY4Yjc4ZTY0MzJjNzY3OCIsImV4cCI6MTUxNTUzNDYxNCwibmJmIjoxNTEwMzUwNjE0fQ.M7CB3T2PmzT2L9laT2m-8WiJpHCD1RcqEvv0SoepT6Q"
 
-// const databaseDSN = "root:root@tcp(127.0.0.1:8889)/wordpress?parseTime=true"
+const databaseDSN = "root:root@tcp(127.0.0.1:8889)/wordpress?parseTime=true"
 
-const databaseDSN = "mybookzy:ZasSaMi&ZasSaMi@tcp(52.187.124.136:3306)/bookzywpdb?charset=utf8&parseTime=true"
+// const databaseDSN = "mybookzy:ZasSaMi&ZasSaMi@tcp(52.187.124.136:3306)/bookzywpdb?charset=utf8&parseTime=true"
 const (
 	maxConcurrency = 8
 )
@@ -53,8 +53,8 @@ func processCommand(cmd string) {
 		ImportShirt(db)
 	case "import_change_shirt":
 		ImportChangeShirt(db)
-	case "retrieve_product":
-		RetrieveInventory(db)
+	case "retrieve_products":
+		RetrieveProducts(db)
 	case "import_stock":
 		ImportStock(db)
 	case "import_stock_left":

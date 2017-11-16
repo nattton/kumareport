@@ -36,13 +36,13 @@
 <div class="row">
       <table class="table">
             <thead>
-            <th>ItemName</th>
+            <th>Name</th>
             <th>Qty</th>
             <th>LineTotal</th>
       </thead>
       {{range .order.OrderItems}}
       <tr>
-            <td>{{.ItemName}}</td>
+            <td>{{.Name}}</td>
             <td>{{.Qty}}</td>
             <td>{{.LineTotal}}</td>
       </tr>

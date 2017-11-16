@@ -85,13 +85,40 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	if formA.TicketTypeID != attendee.TicketTypeID {
 		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.TicketTypeID, kTicketTypeID, attendee.ID)
 	}
-
 	if formA.Firstname != attendee.Firstname {
 		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.Firstname, kFirstname, attendee.ID)
 	}
-
 	if formA.Lastname != attendee.Lastname {
 		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.Lastname, kLastname, attendee.ID)
+	}
+	if formA.Lastname != attendee.Lastname {
+		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.Lastname, kLastname, attendee.ID)
+	}
+	if formA.Phone != attendee.Phone {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kPhone}).Assign(WpPostmeta{MetaValue: formA.Phone}).FirstOrCreate(&WpPostmeta{})
+	}
+	if formA.Gender != attendee.Gender {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kGender}).Assign(WpPostmeta{MetaValue: formA.Gender}).FirstOrCreate(&WpPostmeta{})
+	}
+	if formA.Birthday != attendee.Birthday {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kBirthday}).Assign(WpPostmeta{MetaValue: formA.Birthday}).FirstOrCreate(&WpPostmeta{})
+	}
+	if formA.Address != attendee.Address {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kAddress}).Assign(WpPostmeta{MetaValue: formA.Address}).FirstOrCreate(&WpPostmeta{})
+	}
+
+	if formA.Email != attendee.Email && formA.Email != "" {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kEmail}).Assign(WpPostmeta{MetaValue: formA.Email}).FirstOrCreate(&WpPostmeta{})
+	}
+	if formA.Email == "" {
+		UpdatePostmetaEmpty(db, attendee.ID, kEmail)
+	}
+
+	if formA.IDCard != attendee.IDCard && formA.IDCard != "" {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kIDCard}).Assign(WpPostmeta{MetaValue: formA.IDCard}).FirstOrCreate(&WpPostmeta{})
+	}
+	if formA.IDCard == "" {
+		UpdatePostmetaEmpty(db, attendee.ID, kIDCard)
 	}
 
 	attendee = GetAttendee(db, m, formA.ID)
@@ -102,6 +129,10 @@ func AttendeeUpdateHandler(c *gin.Context) {
 		"ticketTypes": m.ticketTypes,
 		"message":     "Save Complete",
 	})
+}
+
+func UpdatePostmetaEmpty(db *gorm.DB, attendeeID int, metaKey string) {
+	db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", "", metaKey, attendeeID)
 }
 
 func GenerateAttendee(db *gorm.DB, reUpdate bool) {
@@ -199,9 +230,16 @@ func GetShirtSizeAmount(db *gorm.DB) []ShirtSizeAmount {
 }
 
 func GetSkuAmount(db *gorm.DB) []ShirtSizeAmount {
-	rows, _ := db.Raw("SELECT attendees.sku, products.stock, COUNT(*), (products.stock-COUNT(*)) stock_left FROM attendees INNER JOIN products ON (attendees.sku = products.sku) GROUP BY `sku` ORDER BY sku").Rows()
+	rows, _ := db.Raw("SELECT attendees.sku, products.stock, COUNT(*), (products.stock-COUNT(*)) stock_left FROM attendees INNER JOIN products ON (attendees.sku = products.sku) WHERE products.sku LIKE 'kuma%' GROUP BY `sku` ORDER BY display_order").Rows()
 	defer rows.Close()
 	skus := []ShirtSizeAmount{}
+	for rows.Next() {
+		shirtSizeAmount := ShirtSizeAmount{}
+		rows.Scan(&shirtSizeAmount.ShirtSize, &shirtSizeAmount.Stock, &shirtSizeAmount.Amount, &shirtSizeAmount.StockLeft)
+		skus = append(skus, shirtSizeAmount)
+	}
+	rows, _ = db.Raw("SELECT attendees.sku, products.stock, COUNT(*), (products.stock-COUNT(*)) stock_left FROM attendees INNER JOIN products ON (attendees.sku = products.sku) WHERE products.sku LIKE 'sister%' GROUP BY `sku` ORDER BY display_order").Rows()
+	defer rows.Close()
 	for rows.Next() {
 		shirtSizeAmount := ShirtSizeAmount{}
 		rows.Scan(&shirtSizeAmount.ShirtSize, &shirtSizeAmount.Stock, &shirtSizeAmount.Amount, &shirtSizeAmount.StockLeft)

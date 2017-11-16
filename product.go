@@ -13,13 +13,14 @@ type Model struct {
 }
 
 type Product struct {
-	ID    int `gorm:"primary_key"`
-	Sku   string
-	Name  string
-	Stock int
+	ID           int `gorm:"primary_key"`
+	Sku          string
+	Name         string
+	Stock        int
+	DisplayOrder int
 }
 
-func RetrieveInventory(db *gorm.DB) {
+func RetrieveProducts(db *gorm.DB) {
 	db.AutoMigrate(&Product{})
 	model := NewModel(db)
 	var posts []WpPost
@@ -27,11 +28,12 @@ func RetrieveInventory(db *gorm.DB) {
 	for _, post := range posts {
 		p := model.GetProduct(post.ID)
 		product := Product{
-			ID:   post.ID,
-			Sku:  p.Sku,
-			Name: post.PostTitle,
+			ID:           post.ID,
+			Sku:          p.Sku,
+			Name:         post.PostTitle,
+			DisplayOrder: post.MenuOrder,
 		}
-		db.Create(&product)
+		db.Assign(product).FirstOrCreate(&product)
 	}
 }
 
@@ -46,10 +48,10 @@ func NewModel(db *gorm.DB) *Model {
 }
 
 func (model *Model) RetieveTickets() {
-	var posts []WpPost
-	model.db.Where("post_type = 'product_variation' AND post_status= 'publish'").Order("menu_order").Find(&posts)
-	for _, post := range posts {
-		model.ticketTypes[post.ID] = model.GetProduct(post.ID)
+	var products []Product
+	model.db.Find(&products)
+	for _, product := range products {
+		model.ticketTypes[product.ID] = product
 	}
 }
 
@@ -81,11 +83,20 @@ func (model *Model) GetAttendee(id int) Attendee {
 	return attendee
 }
 
+// func (model *Model) RetieveSkuList() {
+// 	var products []Product
+// 	model.db.Find(&products)
+// 	model.db.Where("post_type = 'product_variation' AND post_status= 'publish'").Order("menu_order").Find(&posts)
+// 	for _, post := range posts {
+// 		product := model.GetProduct(post.ID)
+// 		model.skuList[product.Sku] = product
+// 	}
+// }
+
 func (model *Model) RetieveSkuList() {
-	var posts []WpPost
-	model.db.Where("post_type = 'product_variation' AND post_status= 'publish'").Order("menu_order").Find(&posts)
-	for _, post := range posts {
-		product := model.GetProduct(post.ID)
+	var products []Product
+	model.db.Find(&products)
+	for _, product := range products {
 		model.skuList[product.Sku] = product
 	}
 }

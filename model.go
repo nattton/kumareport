@@ -24,6 +24,7 @@ type WpPost struct {
 	PostTitle  string
 	PostStatus string
 	PostType   string
+	MenuOrder  int
 }
 
 type WpPostmeta struct {

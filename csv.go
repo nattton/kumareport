@@ -90,7 +90,7 @@ func ImportChangeShirt(db *gorm.DB) {
 
 func ImportStock(db *gorm.DB) {
 	lines := ReadCSV("KumamonInventory.csv")
-	for _, line := range lines {
+	for _, line := range lines[1:] {
 		db.Exec("UPDATE products SET stock= ? WHERE sku=?", line[1], line[0])
 	}
 }
