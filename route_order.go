@@ -25,9 +25,11 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ItemName  string
-	Qty       string
-	LineTotal string
+	ID        int
+	Name      string
+	Type      string
+	Qty       int
+	LineTotal float64
 }
 
 func OrdersHandler(c *gin.Context) {
@@ -99,31 +101,6 @@ func OrderHandler(c *gin.Context) {
 	})
 }
 
-func OrderDownloadHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	StreamCSVFile(c, GetOrderReport(db), GetFileNameNow("order"))
-}
-
-func ApiOrderHandler(c *gin.Context) {
-	id := c.Query("id")
-	orderID, err := strconv.Atoi(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "ID Invalid"})
-		return
-	}
-	db, _ := OpenDB()
-	defer db.Close()
-
-	order, err := GetOrder(db, orderID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, order)
-}
-
 func GetOrder(db *gorm.DB, orderID int) (Order, error) {
 	order := Order{}
 	var post WpPost
@@ -146,19 +123,4 @@ func GetOrder(db *gorm.DB, orderID int) (Order, error) {
 	order.OrderItems = GetOrderItem(db, order.OrderID)
 	order.Attendees = GetAttendees(db, order.OrderID)
 	return order, nil
-}
-
-func GetOrderItem(db *gorm.DB, id int) []OrderItem {
-	orderItems := []OrderItem{}
-	wpOrderItems := []WpWoocommerceOrderItem{}
-	db.Where("order_item_type = 'line_item' AND order_id = ?", id).Find(&wpOrderItems)
-	for _, wpOrderItem := range wpOrderItems {
-		orderItem := OrderItem{}
-		orderItemmeta := getOrderItemmeta(db, wpOrderItem.OrderItemID)
-		orderItem.ItemName = wpOrderItem.OrderItemName
-		orderItem.Qty = orderItemmeta["_qty"]
-		orderItem.LineTotal = orderItemmeta["_line_total"]
-		orderItems = append(orderItems, orderItem)
-	}
-	return orderItems
 }

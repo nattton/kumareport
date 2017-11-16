@@ -17,6 +17,9 @@ func IndexHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
+	var orderCount int64
+	db.Model(&OrderPayment{}).Count(&orderCount)
+
 	var attendeeTotal int64
 	db.Model(&Attendee{}).Count(&attendeeTotal)
 	var orderTotal int64
@@ -35,6 +38,7 @@ func IndexHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "home.tmpl", gin.H{
 		"attendeeTotal": fmt.Sprintf("%s", humanize.Comma(attendeeTotal)),
 		"orderTotal":    fmt.Sprintf("%s", humanize.Comma(orderTotal)),
+		"orderCount":    fmt.Sprintf("%s", humanize.Comma(orderCount)),
 		"orderPayments": orderPayments,
 		"attendees":     attendees,
 		"shirtSizes":    shirtSizes,
@@ -48,26 +52,27 @@ func NotFoundHandler(c *gin.Context, message string) {
 	})
 }
 
+func ReloadDataHandler(c *gin.Context) {
+	db, _ := OpenDB()
+	defer db.Close()
+
+	GenerateReportOrderPayment(db)
+	GenerateAttendee(db, false)
+	c.Redirect(http.StatusTemporaryRedirect, "/")
+}
+
 func OrdersDownloadHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	StreamCSVFile(c, GetReportOrders(db), GetFileNameNow("orders"))
+	StreamCSVFile(c, GetOrdersCSV(db), GetFileNameNow("orders"))
 }
 
 func OrderPaymentsDownloadHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	StreamCSVFile(c, GetReportOrderPayment(db), GetFileNameNow("order_payment"))
-}
-
-func GenerateOrderHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	GenerateOrderCSVFile(db)
-	c.String(http.StatusOK, "Generating file")
+	StreamCSVFile(c, GetOrderPaymentsCSV(db), GetFileNameNow("order_payment"))
 }
 
 func OrderPaymentsReloadHandler(c *gin.Context) {
@@ -97,20 +102,12 @@ func AttendeesDownloadHandler(c *gin.Context) {
 	StreamCSVFile(c, GetAttendeesCSV(db), GetFileNameNow("attendee"))
 }
 
-func AttendeesReloadHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	GenerateAttendee(db, false)
-	c.Redirect(http.StatusTemporaryRedirect, "/attendees")
-}
-
 func AttendeesReloadAllHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
 	GenerateAttendee(db, true)
-	c.Redirect(http.StatusTemporaryRedirect, "/attendees")
+	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
 func ShirtSizeHandler(c *gin.Context) {
@@ -124,7 +121,7 @@ func ReCheckOnHoldHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	reCheckOnHold(db)
+	ReCheckOnHold(db)
 }
 
 func StreamCSVFile(c *gin.Context, csvData [][]string, fileName string) {

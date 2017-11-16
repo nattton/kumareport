@@ -1,38 +1,11 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
-	"log"
-	"os"
 	"strconv"
 
 	"github.com/jinzhu/gorm"
 )
-
-func WriteCSVFile(csvRow [][]string, fileName string) {
-	csvfile, err := os.Create(fileName + ".csv")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	defer csvfile.Close()
-
-	w := csv.NewWriter(csvfile)
-	w.WriteAll(csvRow) // calls Flush internally
-
-	if err := w.Error(); err != nil {
-		log.Fatalln("error writing csv:", err)
-	}
-}
-
-func GenerateOrderCSVFile(db *gorm.DB) {
-	WriteCSVFile(GetOrderReport(db), GetFileNameNow("order"))
-}
-
-func GenerateShirtSizeCSVFile(db *gorm.DB) {
-	WriteCSVFile(GetShirtSizeCsv(db), GetFileNameNow("shirt_size"))
-}
 
 func GenerateReportOrderPayment(db *gorm.DB) {
 	db.AutoMigrate(&OrderPayment{})
@@ -46,13 +19,13 @@ func GenerateReportOrderPayment(db *gorm.DB) {
 	for _, post := range posts {
 		orderPayment := m.GetOrderPayment(post.ID)
 		if orderPayment.OrderID != post.ID {
-			orderPayment := getPostMetaOrderPayment(db, post.ID)
+			orderPayment := GetPostMetaOrderPayment(db, post.ID)
 			db.Create(&orderPayment)
 		}
 	}
 }
 
-func GetReportOrderPayment(db *gorm.DB) [][]string {
+func GetOrderPaymentsCSV(db *gorm.DB) [][]string {
 	orderPayments := []OrderPayment{}
 	db.Order("payment_date_time").Find(&orderPayments)
 	csvData := [][]string{{
@@ -98,7 +71,7 @@ func GetReportOrderPayment(db *gorm.DB) [][]string {
 	return csvData
 }
 
-func GetReportOrders(db *gorm.DB) [][]string {
+func GetOrdersCSV(db *gorm.DB) [][]string {
 	orderPayments := []OrderPayment{}
 	db.Order("order_id").Find(&orderPayments)
 	csvData := [][]string{{
@@ -190,47 +163,6 @@ func GetReportOrders(db *gorm.DB) [][]string {
 		}
 		firstLineID = report.OrderPayment.OrderID
 	}
-	// for _, order := range orderPayments {
-	// 	var attendees []Attendee
-	// 	db.Where("order_id = ?", order.OrderID).Order("id").Find(&attendees)
-	// 	for i, attendee := range attendees {
-	// 		if i == 0 {
-	// 			csvData = append(csvData, []string{
-	// 				strconv.Itoa(order.OrderID),
-	// 				order.Firstname,
-	// 				order.Lastname,
-	// 				order.Phone,
-	// 				Float64ToString(order.OrderTotal),
-	// 				order.ShippingCompany,
-	// 				order.ShippingAddress,
-	// 				order.ShippingPostcode,
-	// 				strconv.Itoa(attendee.ID),
-	// 				attendee.Firstname,
-	// 				attendee.Lastname,
-	// 				attendee.Phone,
-	// 				attendee.Gender,
-	// 				attendee.Birthday,
-	// 				attendee.Email,
-	// 				attendee.IDCard,
-	// 				attendee.Address,
-	// 				attendee.Sku,
-	// 			})
-	// 		} else {
-	// 			csvData = append(csvData, []string{
-	// 				"", "", "", "", "", "", "", "",
-	// 				attendee.Firstname,
-	// 				attendee.Lastname,
-	// 				attendee.Phone,
-	// 				attendee.Gender,
-	// 				attendee.Birthday,
-	// 				attendee.Email,
-	// 				attendee.IDCard,
-	// 				attendee.Address,
-	// 				attendee.Sku,
-	// 			})
-	// 		}
-	// 	}
-	// }
 	return csvData
 }
 
@@ -272,49 +204,23 @@ func GetAttendeesCSV(db *gorm.DB) [][]string {
 	return csvData
 }
 
-func GetOrderReport(db *gorm.DB) [][]string {
-	csvStatus := [][]string{{"Order ID", "RefID", "Payment Method", "DateTime", "Item Name", "Quantity", "Line Total", "Firstname", "Lastname", "Phone", "Shipping Address", "OrderTotal", "Payment Type", "Payment DateTime", "Payment Amount"}}
-
-	posts := []WpPost{}
-	db.Where("post_status = 'wc-processing' AND post_type = 'shop_order'").Find(&posts)
-
-	for _, post := range posts {
-		postMeta := getPostMeta(db, post.ID)
-		refID := postMeta["_order_key"]
-		paymentStatus := GetPaymentStatus(refID)
-		var paymentType, paymentDateTime, paymentAmount string
-		if paymentStatus.TotalRow == 1 {
-			statusRow := paymentStatus.DataRow[0]
-			paymentType = statusRow.PaymentType
-			paymentDateTime = statusRow.PaymentDateTime
-			paymentAmount = statusRow.PaymentAmount
+func GetOrderItem(db *gorm.DB, orderID int) []OrderItem {
+	orderItems := []OrderItem{}
+	wpOrderItems := []WpWoocommerceOrderItem{}
+	db.Where("order_item_type = 'line_item' AND order_id = ?", orderID).Find(&wpOrderItems)
+	for _, wpOrderItem := range wpOrderItems {
+		orderItemmeta := getOrderItemmeta(db, wpOrderItem.OrderItemID)
+		qty, _ := strconv.Atoi(orderItemmeta["_qty"])
+		lineTotal, _ := strconv.ParseFloat(orderItemmeta["_line_total"], 64)
+		orderItem := OrderItem{
+			ID:        wpOrderItem.OrderItemID,
+			Name:      wpOrderItem.OrderItemName,
+			Qty:       qty,
+			LineTotal: lineTotal,
 		}
-
-		orderItems := []WpWoocommerceOrderItem{}
-		db.Where("order_item_type = 'line_item' AND order_id = ?", post.ID).Find(&orderItems)
-		for orderItemIndex, orderItem := range orderItems {
-
-			orderItemmeta := getOrderItemmeta(db, orderItem.OrderItemID)
-			csvStatus = append(csvStatus, []string{
-				strconv.Itoa(post.ID),
-				IfElse(orderItemIndex == 0, refID, ""),
-				IfElse(orderItemIndex == 0, postMeta["_payment_method"], ""),
-				post.PostDate,
-				orderItem.OrderItemName,
-				orderItemmeta["_qty"],
-				orderItemmeta["_line_total"],
-				IfElse(orderItemIndex == 0, postMeta["_shipping_first_name"], ""),
-				IfElse(orderItemIndex == 0, postMeta["_shipping_last_name"], ""),
-				IfElse(orderItemIndex == 0, postMeta["_billing_phone"], ""),
-				IfElse(orderItemIndex == 0, postMeta["_shipping_address_index"], ""),
-				IfElse(orderItemIndex == 0, postMeta["_order_total"], ""),
-				IfElse(orderItemIndex == 0, paymentType, ""),
-				IfElse(orderItemIndex == 0, paymentDateTime, ""),
-				IfElse(orderItemIndex == 0, paymentAmount, ""),
-			})
-		}
+		orderItems = append(orderItems, orderItem)
 	}
-	return csvStatus
+	return orderItems
 }
 
 func GetShirtSizeCsv(db *gorm.DB) [][]string {

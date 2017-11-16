@@ -1,17 +1,22 @@
 {{ template "header.tmpl" .}}
 
 <div class="row alert alert-success" role="alert">{{.message}}
-    <div class="col-6">Attendee Total {{.attendeeTotal}}</div><div class="col-6">Order Total : ฿{{.orderTotal}}</div>
+    <div class="col-sm-5">Attendee Total {{.attendeeTotal}}</div>
+    <div class="col-sm-5">Order Total ({{.orderCount}}): ฿{{.orderTotal}} </div>
+    <div class="col-sm-2">
+      <a class="btn btn-primary" href="/reload_data"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+      <a class="btn btn-success" href="/orders/download"><i class="fa fa-download" aria-hidden="true"></i></a>
+    </div>
 </div>
-<div class="row justify-content-between">
-  <div>
+
+<div class="row">
+    <div class="col-sm-3">
       <h2>Order Payment</h2>
-  </div>
-  <div class="col-3">
-        <a class="btn btn-primary" href="/order_payments/reload">Reload</a>
-        <a class="btn btn-success" href="/order_payments/download">Download</a>
-        <a class="btn btn-success" href="/orders/download">Download Full Order</a>
-  </div>
+    </div>
+    <div class="col-sm-3">
+      <a class="btn btn-primary" href="/order_payments/reload"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+      <a class="btn btn-success" href="/order_payments/download"><i class="fa fa-download" aria-hidden="true"></i></a>
+    </div>
 </div>
 <div class="row">
     <table class="table">
@@ -23,7 +28,6 @@
         <th>OrderTotal</th>
         <th>PaymentDateTime</th>
         <th>PaymentType</th>
-        <th>PaymentAmount</th>
       </thead>
     {{range .orderPayments}}
     <tr>
@@ -34,21 +38,19 @@
         <td>{{.OrderTotal}}</td>
         <td>{{.PaymentDateTime}}</td>
         <td>{{.PaymentType}}</td>
-        <td>{{.PaymentAmount}}</td>
     </tr>
     {{end}}
   </table>
 </div>
 
-<div class="row justify-content-between">
-  <div>
+<div class="row">
+  <div class="col-sm-3">
       <h2><a href="/attendees">Attendees</a></h2>
   </div>
-  <div class="col-4">
-      <a class="btn btn-primary" href="/attendees/reload">Reload</a>
-      <a class="btn btn-primary" href="/attendees/reload_all">Reload All</a>
-    <a class="btn btn-success" href="/attendees/download">Download</a>
-  </div>
+  <div class="col-sm-3">
+      <a class="btn btn-primary" href="/attendees/reload"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+      <a class="btn btn-success" href="/attendees/download"><i class="fa fa-download" aria-hidden="true"></i></a>
+    </div>
 </div>
 <div class="row">
     <table class="table">
@@ -77,12 +79,12 @@
   </table>
 </div>
 
-<div class="row justify-content-between">
-  <div>
+<div class="row">
+  <div class="col-sm-3">
       <h2>Shirt Size</h2>
   </div>
-  <div class="col-2">
-    <a class="btn btn-success" href="/shirtsizes/download">Download</a>
+  <div class="col-sm-3">
+    <a class="btn btn-success" href="/shirtsizes/download"><i class="fa fa-download" aria-hidden="true"></i></a>
   </div>
 </div>
 <div class="row">

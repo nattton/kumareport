@@ -31,7 +31,7 @@ type OrderPayment struct {
 	ShippingPostcode   string //_shipping_postcode
 }
 
-func getPostMetaOrderPayment(db *gorm.DB, postID int) OrderPayment {
+func GetPostMetaOrderPayment(db *gorm.DB, postID int) OrderPayment {
 	postMeta := make(map[string]string)
 	postMetas := []WpPostmeta{}
 	metaKeys := []string{"_order_key", "_shipping_first_name", "_shipping_last_name", "_billing_phone", "_billing_email", "_shipping_company", "_shipping_address_1", "_shipping_address_2", "_shipping_city", "_shipping_state", "_shipping_postcode", "_shipping_country", "_order_total"}
