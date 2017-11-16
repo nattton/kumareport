@@ -1,0 +1,64 @@
+{{ template "header.tmpl" .}}
+
+<h3>Attendee #{{.attendee.ID}} details | Order #<a href="/order/{{.attendee.OrderID}}">{{.attendee.OrderID}}</a></h3>
+<form method="POST" action="/attendee/{{.attendee.ID}}/edit">
+<div class="form-row">
+            <input type="hidden" name="ID" value="{{.attendee.ID}}">
+      <div class="form-group col-md-6">
+            <label for="firstname">Firstname</label>
+            <input type="text" class="form-control" id="firstname" name="Firstname" value="{{.attendee.Firstname}}">
+      </div>
+      <div class="form-group col-md-6">
+            <label for="lastname">Lastname</label>
+            <input type="text" class="form-control" id="lastname" name="Lastname" value="{{.attendee.Lastname}}">
+      </div>
+</div>
+<div class="form-row">
+      <div class="form-group col-md-6">
+            <label for="phone">Phone</label>
+            <input type="text" class="form-control" id="phone" name="Phone" value="{{.attendee.Phone}}">
+      </div>
+      <div class="form-group col-md-6">
+            <label for="gender">Gender</label>
+            <input type="text" class="form-control" id="gender" name="Gender" value="{{.attendee.Gender}}">
+      </div>
+</div>
+<div class="form-row">
+      <div class="form-group col-md-6">
+            <label for="email">Email</label>
+            <input type="text" class="form-control" id="phone" name="Email" value="{{.attendee.Email}}">
+      </div>
+      <div class="form-group col-md-6">
+            <label for="id_card">IDCard</label>
+            <input type="text" class="form-control" id="gender" name="id_card" value="{{.attendee.IDCard}}">
+      </div>
+</div>
+<div class="form-row">
+      <div class="form-group col-md-12">
+            <label for="address">Address</label>
+            <input type="text" class="form-control" id="address" name="Address" value="{{.attendee.Address}}">
+      </div>
+</div>
+<div class="form-row">
+      <div class="form-group col-md-6">
+            <label for="birthday">Birthday</label>
+            <input type="text" class="form-control" id="birthday" name="Birthday" value="{{.attendee.Birthday}}">
+      </div>
+      <div class="form-group col-md-6">
+            <label for="gender">SKU</label>
+            <select  class="form-control" name="TicketTypeID">
+                        {{$sku := .attendee.Sku}}
+                        {{range $key, $value := .ticketTypes}}
+                              {{if eq $value.Sku $sku }}
+                              <option value="{{$value.ID}}" selected>{{$value.Sku}}</option>
+                              {{end}}
+                              {{if ne $value.Sku $sku }}
+                              <option value="{{$value.ID}}">{{$value.Sku}}</option>
+                              {{end}}
+                        {{end}}
+                  </select>
+      </div>
+</div>
+<button type="submit" class="btn btn-primary">Save</button>
+</form>
+{{ template "footer.tmpl" .}}

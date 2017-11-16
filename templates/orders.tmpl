@@ -1,0 +1,33 @@
+{{ template "header.tmpl" .}}
+
+<div class="row justify-content-between">
+  <div>
+      <h2>Order Payment</h2>
+  </div>
+  <div class="col-3">
+        <a class="btn btn-primary" href="/order_payments/reload">Reload</a>
+        <a class="btn btn-success" href="/order_payments/download">Download</a>
+  </div>
+</div>
+<div class="row">
+    <table class="table">
+      <thead>
+        <th>OrderID</th>
+        <th>Firstname</th>
+        <th>Lastname</th>
+        <th>Phone</th>
+        <th>OrderTotal</th>
+      </thead>
+    {{range .orders}}
+    <tr>
+        <td><a href="/order/{{.OrderID}}">{{.OrderID}}</a></td>
+        <td>{{.Firstname}}</td>
+        <td>{{.Lastname}}</td>
+        <td>{{.Phone}}</td>
+        <td>{{.OrderTotal}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+
+{{ template "footer.tmpl" .}}

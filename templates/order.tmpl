@@ -1,0 +1,77 @@
+{{ template "header.tmpl" .}}
+
+<h3>Order #{{.order.OrderID}} details</h3>
+<div class="row">
+      <div class="col-sm-2">RefID</div>
+      <div class="col-sm-10">{{.order.RefID}} <a href="https://kumarathonbkk.bookzy.co.th/checkout/order-received/{{.order.OrderID}}/?key=wc_order_5a065bb54d71c{{.order.RefID}}">Checkout</a></div>
+</div>
+<div class="row">
+            <div class="col-sm-2">Status</div><div class="col-sm-10">{{.order.Status}}</div>
+</div>
+<div class="row">
+      <div class="col-sm-2">Name</div><div class="col-sm-10">{{.order.Firstname}} {{.order.Lastname}}</div>
+</div>
+<div class="row">
+      <div class="col-sm-2">Phone</div><div class="col-sm-10">{{.order.Phone}}</div>
+</div>
+<div class="row">
+      <div class="col-sm-2">Email</div><div class="col-sm-10">{{.order.Email}}</div>
+</div>
+<div class="row">
+      <div class="col-sm-2">OrderTotal</div><div class="col-sm-10">{{.order.OrderTotal}}</div>
+</div>
+
+<h3>Payment Status</h3>
+{{range .order.PaymentStatus.DataRow}}
+      <div class="row">
+            <div class="col-sm-2">PaymentMessage</div>
+            <div class="col-sm-10">{{.PaymentMessage}}</div>
+            <div class="col-sm-2">PaymentType</div><div class="col-sm-10">{{.PaymentType}}</div>
+            <div class="col-sm-2">PaymentAmount</div><div class="col-sm-10">{{.PaymentAmount}}</div>
+            <div class="col-sm-2">PaymentDateTime</div><div class="col-sm-10">{{.PaymentDateTime}}</div>
+      </div>
+{{end}}
+
+<h3>Order Items</h3>
+<div class="row">
+      <table class="table">
+            <thead>
+            <th>ItemName</th>
+            <th>Qty</th>
+            <th>LineTotal</th>
+      </thead>
+      {{range .order.OrderItems}}
+      <tr>
+            <td>{{.ItemName}}</td>
+            <td>{{.Qty}}</td>
+            <td>{{.LineTotal}}</td>
+      </tr>
+      {{end}}
+      </table>
+</div>
+<h3>Attendees</h3>
+<div class="row">
+      <table class="table">
+      <thead>
+            <th>ID</th>
+            <th>Firstname</th>
+            <th>Lastname</th>
+            <th>Phone</th>
+            <th>Gender</th>
+            <th>Birthday</th>
+            <th>Sku</th>
+      </thead>
+      {{range .order.Attendees}}
+      <tr>
+            <td><a href="/attendee/{{.ID}}">{{.ID}}</a></td>
+            <td>{{.Firstname}}</td>
+            <td>{{.Lastname}}</td>
+            <td>{{.Phone}}</td>
+            <td>{{.Gender}}</td>
+            <td>{{.Birthday}}</td>
+            <td>{{.Sku}}</td>
+      </tr>
+      {{end}}
+      </table>
+</div>
+{{ template "footer.tmpl" .}}

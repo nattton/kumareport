@@ -1,0 +1,36 @@
+{{ template "header.tmpl" .}}
+
+<div class="row justify-content-between">
+  <div>
+      <h2>Attendees</h2>
+  </div>
+  <div class="col-5">
+    <a class="btn btn-primary" href="/attendees/reload">Reload</a>
+    <a class="btn btn-primary" href="/attendees/reload_all">Reload All</a>
+    <a class="btn btn-success" href="/attendees/download">Download</a>
+  </div>
+</div>
+<div class="row">
+    <table class="table">
+      <thead>
+        <th>ID</th>
+        <th>OrderID</th>
+        <th>Firstname</th>
+        <th>Lastname</th>
+        <th>Phone</th>
+        <th>Sku</th>
+      </thead>
+    {{range .attendees}}
+    <tr>
+        <td><a href="/attendee/{{.ID}}">{{.ID}}</a></td>  
+        <td>{{.OrderID}}</td>
+        <td>{{.Firstname}}</td>
+        <td>{{.Lastname}}</td>
+        <td>{{.Phone}}</td>
+        <td>{{.Sku}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+
+{{ template "footer.tmpl" .}}
