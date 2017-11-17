@@ -139,14 +139,14 @@ func UpdatePostmetaEmpty(db *gorm.DB, attendeeID int, metaKey string) {
 	db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", "", metaKey, attendeeID)
 }
 
-func GenerateAttendee(db *gorm.DB, reUpdate bool) {
+func GenerateAttendee(db *gorm.DB, forceUpdate bool) {
 	db.AutoMigrate(&Attendee{})
 
 	m := NewModel(db)
 	m.RetieveTickets()
 	m.RetieveAttendee()
 	posts := []WpPost{}
-	if reUpdate {
+	if forceUpdate {
 		db.Where("post_status = 'wc-processing' AND post_type = 'shop_order'").Find(&posts)
 	} else {
 		db.Raw("SELECT wp_posts.* FROM wp_posts LEFT OUTER JOIN attendees ON (wp_posts.ID = attendees.order_id) WHERE wp_posts.post_status = 'wc-processing' AND wp_posts.post_type = 'shop_order' AND attendees.id IS NULL").Scan(&posts)
@@ -158,29 +158,22 @@ func GenerateAttendee(db *gorm.DB, reUpdate bool) {
 		for _, metaTicket := range metaTickets {
 			throttle <- 1
 			wg.Add(1)
-			go UpdateAttendee(db, &wg, throttle, m, post, metaTicket.PostID, reUpdate)
+			go UpdateAttendee(db, &wg, throttle, m, post, metaTicket.PostID, forceUpdate)
 		}
 		wg.Wait()
 	}
 }
 
-func UpdateAttendee(db *gorm.DB, wg *sync.WaitGroup, throttle chan int, m *Model, post WpPost, attendeeID int, reUpdate bool) {
+func UpdateAttendee(db *gorm.DB, wg *sync.WaitGroup, throttle chan int, m *Model, post WpPost, attendeeID int, forceUpdate bool) {
 	defer wg.Done()
-	var isNew bool
 	attendee := m.GetAttendee(attendeeID)
 	if attendee.ID != attendeeID {
-		isNew = true
-		attendee.ID = attendeeID
-	} else {
-		if !reUpdate {
-			return
-		}
-	}
-	attendee = GetAttendee(db, m, attendeeID)
-	attendee.OrderID = post.ID
-	if isNew {
+		attendee = GetAttendee(db, m, attendeeID)
+		attendee.OrderID = post.ID
 		db.Create(&attendee)
-	} else {
+	} else if forceUpdate {
+		attendee = GetAttendee(db, m, attendeeID)
+		attendee.OrderID = post.ID
 		db.Save(&attendee)
 	}
 	<-throttle
