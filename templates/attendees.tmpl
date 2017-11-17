@@ -1,13 +1,12 @@
 {{ template "header.tmpl" .}}
 
 <div class="row justify-content-between">
-  <div>
+  <div class="col-sm-3">
       <h2>Attendees</h2>
   </div>
-  <div class="col-5">
-    <a class="btn btn-primary" href="/attendees/reload">Reload</a>
-    <a class="btn btn-primary" href="/attendees/reload_all">Reload All</a>
-    <a class="btn btn-success" href="/attendees/download">Download</a>
+  <div class="col-sm-2">
+    <a class="btn btn-danger" href="/attendees/reload"><i class="fa fa-refresh" aria-hidden="true"></i></a>
+    <a class="btn btn-success" href="/attendees/download"><i class="fa fa-download" aria-hidden="true"></i></a>
   </div>
 </div>
 <div class="row">
