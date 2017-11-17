@@ -103,9 +103,6 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	if formA.Birthday != attendee.Birthday {
 		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kBirthday}).Assign(WpPostmeta{MetaValue: formA.Birthday}).FirstOrCreate(&WpPostmeta{})
 	}
-	if formA.Address != attendee.Address {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kAddress}).Assign(WpPostmeta{MetaValue: formA.Address}).FirstOrCreate(&WpPostmeta{})
-	}
 
 	if formA.Email != attendee.Email && formA.Email != "" {
 		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kEmail}).Assign(WpPostmeta{MetaValue: formA.Email}).FirstOrCreate(&WpPostmeta{})
@@ -119,6 +116,13 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	}
 	if formA.IDCard == "" {
 		UpdatePostmetaEmpty(db, attendee.ID, kIDCard)
+	}
+
+	if formA.Address != attendee.Address && formA.Address != "" {
+		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kAddress}).Assign(WpPostmeta{MetaValue: formA.Address}).FirstOrCreate(&WpPostmeta{})
+	}
+	if formA.Address == "" {
+		UpdatePostmetaEmpty(db, attendee.ID, kAddress)
 	}
 
 	attendee = GetAttendee(db, m, formA.ID)

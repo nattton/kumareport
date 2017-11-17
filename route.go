@@ -56,7 +56,7 @@ func ReloadDataHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	GenerateReportOrderPayment(db)
+	GenerateOrderPayments(db, false)
 	GenerateAttendee(db, false)
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
@@ -79,7 +79,7 @@ func OrderPaymentsReloadHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	GenerateReportOrderPayment(db)
+	GenerateOrderPayments(db, true)
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 

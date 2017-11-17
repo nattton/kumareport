@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func GenerateReportOrderPayment(db *gorm.DB) {
+func GenerateOrderPayments(db *gorm.DB, forceUpdate bool) {
 	db.AutoMigrate(&OrderPayment{})
 
 	posts := []WpPost{}
@@ -21,6 +21,9 @@ func GenerateReportOrderPayment(db *gorm.DB) {
 		if orderPayment.OrderID != post.ID {
 			orderPayment := GetPostMetaOrderPayment(db, post.ID)
 			db.Create(&orderPayment)
+		} else if forceUpdate {
+			orderPayment := GetPostMetaOrderPayment(db, post.ID)
+			db.Save(&orderPayment)
 		}
 	}
 }
