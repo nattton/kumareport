@@ -76,56 +76,36 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	db, _ := OpenDB()
 	m := NewModel(db)
 	m.RetieveTickets()
-	attendee := GetAttendee(db, m, formA.ID)
-	if formA.ID != attendee.ID {
+	var wpAttendee WpPost
+	db.First(&wpAttendee, formA.ID)
+	if formA.ID != wpAttendee.ID || wpAttendee.PostType != "tc_tickets_instances" {
 		NotFoundHandler(c, "Not Found")
 		return
 	}
 
-	if formA.TicketTypeID != attendee.TicketTypeID {
-		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.TicketTypeID, kTicketTypeID, attendee.ID)
+	formMaps := map[string]string{
+		kTicketTypeID: strconv.Itoa(formA.TicketTypeID),
+		kFirstname:    formA.Firstname,
+		kLastname:     formA.Lastname,
+		kPhone:        formA.Phone,
+		kIDCard:       formA.IDCard,
+		kGender:       formA.Gender,
+		kBirthday:     formA.Birthday,
+		kEmail:        formA.Email,
+		kAddress:      formA.Address,
 	}
-	if formA.Firstname != attendee.Firstname {
-		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.Firstname, kFirstname, attendee.ID)
+	formKeys := []string{}
+	for key := range formMaps {
+		formKeys = append(formKeys, key)
 	}
-	if formA.Lastname != attendee.Lastname {
-		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.Lastname, kLastname, attendee.ID)
-	}
-	if formA.Lastname != attendee.Lastname {
-		db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", formA.Lastname, kLastname, attendee.ID)
-	}
-	if formA.Phone != attendee.Phone {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kPhone}).Assign(WpPostmeta{MetaValue: formA.Phone}).FirstOrCreate(&WpPostmeta{})
-	}
-	if formA.Gender != attendee.Gender {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kGender}).Assign(WpPostmeta{MetaValue: formA.Gender}).FirstOrCreate(&WpPostmeta{})
-	}
-	if formA.Birthday != attendee.Birthday {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kBirthday}).Assign(WpPostmeta{MetaValue: formA.Birthday}).FirstOrCreate(&WpPostmeta{})
-	}
-
-	if formA.Email != attendee.Email && formA.Email != "" {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kEmail}).Assign(WpPostmeta{MetaValue: formA.Email}).FirstOrCreate(&WpPostmeta{})
-	}
-	if formA.Email == "" {
-		UpdatePostmetaEmpty(db, attendee.ID, kEmail)
+	attendeeMeta := getPostMetaFields(db, formA.ID, formKeys)
+	for metaKey, metaValue := range formMaps {
+		if attendeeMeta[metaKey] != metaValue {
+			UpdatePostMeta(db, formA.ID, metaKey, metaValue)
+		}
 	}
 
-	if formA.IDCard != attendee.IDCard && formA.IDCard != "" {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kIDCard}).Assign(WpPostmeta{MetaValue: formA.IDCard}).FirstOrCreate(&WpPostmeta{})
-	}
-	if formA.IDCard == "" {
-		UpdatePostmetaEmpty(db, attendee.ID, kIDCard)
-	}
-
-	if formA.Address != attendee.Address && formA.Address != "" {
-		db.Where(WpPostmeta{PostID: attendee.ID, MetaKey: kAddress}).Assign(WpPostmeta{MetaValue: formA.Address}).FirstOrCreate(&WpPostmeta{})
-	}
-	if formA.Address == "" {
-		UpdatePostmetaEmpty(db, attendee.ID, kAddress)
-	}
-
-	attendee = GetAttendee(db, m, formA.ID)
+	attendee := GetAttendee(db, m, formA.ID)
 	db.Save(&attendee)
 
 	c.HTML(http.StatusOK, "attendee.tmpl", gin.H{
@@ -135,8 +115,19 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	})
 }
 
-func UpdatePostmetaEmpty(db *gorm.DB, attendeeID int, metaKey string) {
-	db.Exec("UPDATE wp_postmeta SET meta_value= ? WHERE meta_key=? AND post_id = ?", "", metaKey, attendeeID)
+func UpdatePostMeta(db *gorm.DB, postID int, metaKey string, metaValue string) {
+	wpMeta := WpPostmeta{}
+	db.Where("post_id = ? AND meta_key = ?", postID, metaKey).First(&wpMeta)
+	if wpMeta.MetaValue != metaValue {
+		wpMeta.MetaValue = metaValue
+		if wpMeta.MetaID != 0 {
+			db.Save(&wpMeta)
+		} else {
+			wpMeta.PostID = postID
+			wpMeta.MetaKey = metaKey
+			db.Create(&wpMeta)
+		}
+	}
 }
 
 func GenerateAttendee(db *gorm.DB, forceUpdate bool) {
