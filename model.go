@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 )
 
@@ -16,6 +17,15 @@ func OpenDB() (*gorm.DB, error) {
 	}
 	db.LogMode(gin.Mode() == "debug")
 	return db, err
+}
+
+func OpenRedis() *redis.Client {
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+	return client
 }
 
 type WpPost struct {

@@ -33,5 +33,10 @@ func runServer() {
 
 	}
 
+	api := router.Group("/api")
+	{
+		api.GET("/attendees", ApiAttendeesHandler)
+	}
+
 	router.Run(":3000")
 }

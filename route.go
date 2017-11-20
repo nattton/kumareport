@@ -58,6 +58,8 @@ func ReloadDataHandler(c *gin.Context) {
 
 	GenerateOrderPayments(db, false)
 	GenerateAttendee(db, false)
+	redisClient := OpenRedis()
+	redisClient.FlushAll()
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
@@ -107,6 +109,8 @@ func AttendeesReloadAllHandler(c *gin.Context) {
 	defer db.Close()
 
 	GenerateAttendee(db, true)
+	redisClient := OpenRedis()
+	redisClient.FlushAll()
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
