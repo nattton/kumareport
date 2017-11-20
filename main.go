@@ -25,7 +25,8 @@ var throttle = make(chan int, maxConcurrency)
 var cmd string
 
 func init() {
-	flag.StringVar(&cmd, "cmd", "", `reload_attendees
+	flag.StringVar(&cmd, "cmd", "", `reload_data
+	reload_attendees
 	reload_order_payment`)
 	flag.Parse()
 }
@@ -42,6 +43,9 @@ func processCommand(cmd string) {
 	db, _ := OpenDB()
 	defer db.Close()
 	switch cmd {
+	case "reload_data":
+		GenerateOrderPayments(db, true)
+		GenerateAttendee(db, true)
 	case "reload_orders":
 		GenerateOrderPayments(db, true)
 	case "reload_attendees":
