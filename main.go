@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/code-mobi/kumareport/wp"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 )
@@ -50,26 +51,20 @@ func processCommand(cmd string) {
 		GenerateOrderPayments(db, true)
 	case "reload_attendees":
 		GenerateAttendee(db, true)
-	case "import_shirt":
-		ImportShirt(db)
-	case "import_change_shirt":
-		ImportChangeShirt(db)
 	case "retrieve_products":
 		RetrieveProducts(db)
 	case "import_stock":
 		ImportStock(db)
-	case "import_stock_left":
-		ImportStockLeft(db)
 	default:
 		log.Println("cmd not found")
 	}
 }
 
 func ReCheckProcessing(db *gorm.DB) {
-	posts := []WpPost{}
+	posts := []wp.WpPost{}
 	db.Where("post_status = 'wc-processing' AND post_type = 'shop_order'").Find(&posts)
 	for _, post := range posts {
-		postMeta := getPostMeta(db, post.ID)
+		postMeta := GetPostMetaOrder(db, post.ID)
 		refID := postMeta["_order_key"]
 		status := GetPaymentStatus(refID)
 
@@ -89,13 +84,13 @@ func ReCheckProcessing(db *gorm.DB) {
 }
 
 func ReCheckOnHold(db *gorm.DB) {
-	metaOnholds := []WpPostmeta{}
+	metaOnholds := []wp.WpPostmeta{}
 	db.Where("meta_key = '_date_paid' AND meta_value = ?", "").Find(&metaOnholds)
 
 	for _, meta := range metaOnholds {
 		log.Println(meta.PostID)
 
-		metaOrder := WpPostmeta{}
+		metaOrder := wp.WpPostmeta{}
 		db.Where("meta_key = '_order_key' AND post_id = ?", meta.PostID).First(&metaOrder)
 		checkURL := fmt.Sprintf("https://kumarathonbkk.bookzy.co.th/checkout/order-received/%d/?key=%s", meta.PostID, metaOrder.MetaValue)
 		log.Println(checkURL)

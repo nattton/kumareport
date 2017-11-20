@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/code-mobi/kumareport/wp"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
@@ -28,22 +29,6 @@ func OpenRedis() *redis.Client {
 	return client
 }
 
-type WpPost struct {
-	ID         int `gorm:"primary_key;column:ID"`
-	PostDate   string
-	PostTitle  string
-	PostStatus string
-	PostType   string
-	MenuOrder  int
-}
-
-type WpPostmeta struct {
-	MetaID    int `gorm:"primary_key"`
-	PostID    int
-	MetaKey   string
-	MetaValue string
-}
-
 type PaymentStatus struct {
 	TotalRow int
 	DataRow  []StatusDataRow
@@ -62,46 +47,21 @@ type StatusDataRow struct {
 	OrderNo         string
 }
 
-type WpWoocommerceOrderItem struct {
-	OrderItemID   int
-	OrderItemName string
-	OrderItemType string
-	OrderID       int
+func Float64ToString(i float64) string {
+	v := strconv.FormatFloat(i, 'f', 2, 64)
+	return v
 }
 
-type WpWoocommerceOrderItemmeta struct {
-	MetaID      int
-	OrderItemID int
-	MetaKey     string
-	MetaValue   string
-}
-
-func getPostMeta(db *gorm.DB, postID int) map[string]string {
-	postMeta := make(map[string]string)
-	postMetas := []WpPostmeta{}
+func GetPostMetaOrder(db *gorm.DB, postID int) map[string]string {
 	metaKeys := []string{"_order_key", "_payment_method", "_paid_date", "_shipping_first_name", "_shipping_last_name", "_billing_phone", "_billing_email", "_shipping_address_index", "_order_total"}
-	db.Where("post_id = ? AND meta_key IN (?)", postID, metaKeys).Find(&postMetas)
+	postMeta := wp.GetPostMetaFields(db, postID, metaKeys)
 
-	for i := range postMetas {
-		postMeta[postMetas[i].MetaKey] = postMetas[i].MetaValue
-	}
 	return postMeta
 }
 
-func getPostMetaFields(db *gorm.DB, postID int, metaKeys []string) map[string]string {
-	postMeta := make(map[string]string)
-	postMetas := []WpPostmeta{}
-	db.Where("post_id = ? AND meta_key IN (?)", postID, metaKeys).Find(&postMetas)
-
-	for i := range postMetas {
-		postMeta[postMetas[i].MetaKey] = postMetas[i].MetaValue
-	}
-	return postMeta
-}
-
-func getPostMetaAttendee(db *gorm.DB, postID int) Attendee {
+func GetPostMetaAttendee(db *gorm.DB, postID int) Attendee {
 	metaKeys := []string{kTicketTypeID, kTicketCode, kFirstname, kLastname, kPhone, kGender, kBirthday, kEmail, kIDCard, kAddress}
-	postMeta := getPostMetaFields(db, postID, metaKeys)
+	postMeta := wp.GetPostMetaFields(db, postID, metaKeys)
 	orderID, _ := strconv.Atoi(strings.Split(postMeta[kTicketCode], "-")[0])
 	ticketTypeID, _ := strconv.Atoi(postMeta[kTicketTypeID])
 	attendee := Attendee{
@@ -119,21 +79,4 @@ func getPostMetaAttendee(db *gorm.DB, postID int) Attendee {
 		Address:      postMeta[kAddress],
 	}
 	return attendee
-}
-
-func getOrderItemmeta(db *gorm.DB, orderItemID int) map[string]string {
-	postMeta := make(map[string]string)
-	postMetas := []WpWoocommerceOrderItemmeta{}
-	metaKeys := []string{"_qty", "_line_total"}
-	db.Where("order_item_id = ? AND meta_key IN (?)", orderItemID, metaKeys).Find(&postMetas)
-
-	for i := range postMetas {
-		postMeta[postMetas[i].MetaKey] = postMetas[i].MetaValue
-	}
-	return postMeta
-}
-
-func Float64ToString(i float64) string {
-	v := strconv.FormatFloat(i, 'f', 2, 64)
-	return v
 }

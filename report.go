@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/code-mobi/kumareport/wp"
 	"github.com/jinzhu/gorm"
 )
 
 func GenerateOrderPayments(db *gorm.DB, forceUpdate bool) {
 	db.AutoMigrate(&OrderPayment{})
 
-	posts := []WpPost{}
+	posts := []wp.WpPost{}
 	db.Where("post_status = 'wc-processing' AND post_type = 'shop_order'").Find(&posts)
 	m := NewModel(db)
 	if len(posts) > 0 {
@@ -209,10 +210,10 @@ func GetAttendeesCSV(db *gorm.DB) [][]string {
 
 func GetOrderItem(db *gorm.DB, orderID int) []OrderItem {
 	orderItems := []OrderItem{}
-	wpOrderItems := []WpWoocommerceOrderItem{}
+	wpOrderItems := []wp.WpWoocommerceOrderItem{}
 	db.Where("order_item_type = 'line_item' AND order_id = ?", orderID).Find(&wpOrderItems)
 	for _, wpOrderItem := range wpOrderItems {
-		orderItemmeta := getOrderItemmeta(db, wpOrderItem.OrderItemID)
+		orderItemmeta := wp.GetOrderItemmeta(db, wpOrderItem.OrderItemID)
 		qty, _ := strconv.Atoi(orderItemmeta["_qty"])
 		lineTotal, _ := strconv.ParseFloat(orderItemmeta["_line_total"], 64)
 		orderItem := OrderItem{

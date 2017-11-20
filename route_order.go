@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/code-mobi/kumareport/wp"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
@@ -46,9 +47,9 @@ func OrdersHandler(c *gin.Context) {
 		for rows.Next() {
 			var orderID int
 			rows.Scan(&orderID)
-			var post WpPost
+			var post wp.WpPost
 			db.First(&post, orderID)
-			postMeta := getPostMeta(db, orderID)
+			postMeta := GetPostMetaOrder(db, orderID)
 			orderTotal, _ := strconv.ParseFloat(postMeta["_order_total"], 64)
 			order := Order{
 				OrderID:    orderID,
@@ -103,9 +104,9 @@ func OrderHandler(c *gin.Context) {
 
 func GetOrder(db *gorm.DB, orderID int) (Order, error) {
 	order := Order{}
-	var post WpPost
+	var post wp.WpPost
 	db.First(&post, orderID)
-	orderMeta := getPostMetaFields(db, orderID, []string{"_order_key", "_payment_method", "_order_total", "_shipping_first_name", "_shipping_last_name", "_billing_phone", "_billing_email"})
+	orderMeta := wp.GetPostMetaFields(db, orderID, []string{"_order_key", "_payment_method", "_order_total", "_shipping_first_name", "_shipping_last_name", "_billing_phone", "_billing_email"})
 	if orderMeta["_order_key"] == "" {
 		return order, errors.New("Order Not Found")
 	}

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/code-mobi/kumareport/wp"
+
 	"github.com/dustin/go-humanize"
 
 	"github.com/gin-gonic/gin"
@@ -58,8 +60,6 @@ func ReloadDataHandler(c *gin.Context) {
 
 	GenerateOrderPayments(db, false)
 	GenerateAttendee(db, false)
-	redisClient := OpenRedis()
-	redisClient.FlushAll()
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
@@ -109,8 +109,6 @@ func AttendeesReloadAllHandler(c *gin.Context) {
 	defer db.Close()
 
 	GenerateAttendee(db, true)
-	redisClient := OpenRedis()
-	redisClient.FlushAll()
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
@@ -146,4 +144,37 @@ func GetFileNameNow(filename string) string {
 	loc, _ := time.LoadLocation("Asia/Bangkok")
 	t := time.Now().In(loc)
 	return fmt.Sprintf("%s-%s", filename, t.Format("2006-01-02_15-04"))
+}
+
+func LoginHandler(c *gin.Context) {
+	type FormLogin struct {
+		Login    string `form:"login" json:"user" binding:"required"`
+		Password string `form:"password" json:"password" binding:"required"`
+	}
+	var formLogin FormLogin
+	var errorMsg string
+	if err := c.ShouldBind(&formLogin); err != nil {
+		log.Println("Form Error")
+	} else {
+		db, _ := OpenDB()
+		var user wp.WpUser
+		if formLogin.Login != "" && formLogin.Password != "" {
+			db.Where("user_login = ? OR user_email = ?", formLogin.Login, formLogin.Login).First(&user)
+			log.Printf("%v", user)
+			if user.ID != 0 {
+				if PortableHashCheck(formLogin.Password, user.UserPass) {
+					errorMsg = "Login Success"
+				} else {
+					errorMsg = "Incorrect password"
+				}
+			} else {
+				errorMsg = "Incorrect username or password."
+			}
+
+		}
+	}
+
+	c.HTML(http.StatusOK, "login.tmpl", gin.H{
+		"error": errorMsg,
+	})
 }

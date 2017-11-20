@@ -10,6 +10,8 @@ import (
 	"github.com/go-redis/redis"
 )
 
+const kCacheApiAttendees = "api_attendee"
+
 func ApiAttendeesHandler(c *gin.Context) {
 	c.Writer.Header().Set("Access-Control-Allow-Origin", "https://kumarathonbkk.bookzy.co.th")
 	type Attendee struct {
@@ -20,10 +22,8 @@ func ApiAttendeesHandler(c *gin.Context) {
 		ItemName  string
 	}
 	var attendees []Attendee
-
-	key := "api_attendee"
 	redisClient := OpenRedis()
-	results, err := redisClient.Get(key).Result()
+	results, err := redisClient.Get(kCacheApiAttendees).Result()
 	if err != nil || err == redis.Nil {
 		db, _ := OpenDB()
 		db.Raw("SELECT id, order_id, firstname, lastname, sku item_name FROM attendees ORDER BY order_id, id").Scan(&attendees)
@@ -34,7 +34,7 @@ func ApiAttendeesHandler(c *gin.Context) {
 			log.Println(err)
 		}
 
-		err = redisClient.Set(key, b, 10*time.Minute).Err()
+		err = redisClient.Set(kCacheApiAttendees, b, 5*time.Minute).Err()
 		if err != nil {
 			log.Println(err)
 		}

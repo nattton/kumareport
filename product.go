@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/code-mobi/kumareport/wp"
 	"github.com/jinzhu/gorm"
 )
 
@@ -23,7 +24,7 @@ type Product struct {
 func RetrieveProducts(db *gorm.DB) {
 	db.AutoMigrate(&Product{})
 	model := NewModel(db)
-	var posts []WpPost
+	var posts []wp.WpPost
 	db.Where("post_type = 'product_variation' AND post_status= 'publish'").Order("menu_order").Find(&posts)
 	for _, post := range posts {
 		p := model.GetProduct(post.ID)
@@ -60,7 +61,7 @@ func (model *Model) GetProduct(id int) Product {
 		return product
 	}
 
-	postMetaTicketType := getPostMetaFields(model.db, id, []string{"_sku"})
+	postMetaTicketType := wp.GetPostMetaFields(model.db, id, []string{"_sku"})
 	return Product{ID: id, Sku: postMetaTicketType["_sku"]}
 }
 

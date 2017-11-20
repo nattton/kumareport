@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/code-mobi/kumareport/wp"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
@@ -71,12 +71,10 @@ func AttendeeUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("%v", formA)
-
 	db, _ := OpenDB()
 	m := NewModel(db)
 	m.RetieveTickets()
-	var wpAttendee WpPost
+	var wpAttendee wp.WpPost
 	db.First(&wpAttendee, formA.ID)
 	if formA.ID != wpAttendee.ID || wpAttendee.PostType != "tc_tickets_instances" {
 		NotFoundHandler(c, "Not Found")
@@ -98,7 +96,7 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	for key := range formMaps {
 		formKeys = append(formKeys, key)
 	}
-	attendeeMeta := getPostMetaFields(db, formA.ID, formKeys)
+	attendeeMeta := wp.GetPostMetaFields(db, formA.ID, formKeys)
 	for metaKey, metaValue := range formMaps {
 		if attendeeMeta[metaKey] != metaValue {
 			UpdatePostMeta(db, formA.ID, metaKey, metaValue)
@@ -116,7 +114,7 @@ func AttendeeUpdateHandler(c *gin.Context) {
 }
 
 func UpdatePostMeta(db *gorm.DB, postID int, metaKey string, metaValue string) {
-	wpMeta := WpPostmeta{}
+	wpMeta := wp.WpPostmeta{}
 	db.Where("post_id = ? AND meta_key = ?", postID, metaKey).First(&wpMeta)
 	if wpMeta.MetaValue != metaValue {
 		wpMeta.MetaValue = metaValue
@@ -136,14 +134,14 @@ func GenerateAttendee(db *gorm.DB, forceUpdate bool) {
 	m := NewModel(db)
 	m.RetieveTickets()
 	m.RetieveAttendee()
-	posts := []WpPost{}
+	posts := []wp.WpPost{}
 	if forceUpdate {
 		db.Where("post_status = 'wc-processing' AND post_type = 'shop_order'").Find(&posts)
 	} else {
 		db.Raw("SELECT wp_posts.* FROM wp_posts LEFT OUTER JOIN attendees ON (wp_posts.ID = attendees.order_id) WHERE wp_posts.post_status = 'wc-processing' AND wp_posts.post_type = 'shop_order' AND attendees.id IS NULL").Scan(&posts)
 	}
 	for _, post := range posts {
-		var metaTickets []WpPostmeta
+		var metaTickets []wp.WpPostmeta
 		db.Where("meta_key = ? AND meta_value LIKE ?", kTicketCode, strconv.Itoa(post.ID)+"-%").Find(&metaTickets)
 		var wg sync.WaitGroup
 		for _, metaTicket := range metaTickets {
@@ -153,9 +151,11 @@ func GenerateAttendee(db *gorm.DB, forceUpdate bool) {
 		}
 		wg.Wait()
 	}
+	redisClient := OpenRedis()
+	redisClient.Del(kCacheApiAttendees)
 }
 
-func UpdateAttendee(db *gorm.DB, wg *sync.WaitGroup, throttle chan int, m *Model, post WpPost, attendeeID int, forceUpdate bool) {
+func UpdateAttendee(db *gorm.DB, wg *sync.WaitGroup, throttle chan int, m *Model, post wp.WpPost, attendeeID int, forceUpdate bool) {
 	defer wg.Done()
 	attendee := m.GetAttendee(attendeeID)
 	if attendee.ID != attendeeID {
@@ -174,7 +174,7 @@ func GetAttendees(db *gorm.DB, orderID int) []Attendee {
 	attendees := []Attendee{}
 	m := NewModel(db)
 	m.RetieveAttendee()
-	var metaTickets []WpPostmeta
+	var metaTickets []wp.WpPostmeta
 	db.Where("meta_key = 'ticket_code' AND meta_value LIKE ?", strconv.Itoa(orderID)+"-%").Find(&metaTickets)
 	for _, metaTicket := range metaTickets {
 		attendees = append(attendees, GetAttendee(db, m, metaTicket.PostID))
@@ -189,7 +189,7 @@ func GetAttendee(db *gorm.DB, m *Model, attendeeID int) Attendee {
 		attendee.ID = attendeeID
 	}
 
-	attendee = getPostMetaAttendee(db, attendeeID)
+	attendee = GetPostMetaAttendee(db, attendeeID)
 	ticketType := m.GetProduct(attendee.TicketTypeID)
 	attendee.Sku = ticketType.Sku
 	orderID, _ := strconv.Atoi(strings.Split(attendee.TicketCode, "-")[0])
