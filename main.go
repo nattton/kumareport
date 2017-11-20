@@ -44,8 +44,8 @@ func processCommand(cmd string) {
 	defer db.Close()
 	switch cmd {
 	case "reload_data":
-		GenerateOrderPayments(db, true)
-		GenerateAttendee(db, true)
+		GenerateOrderPayments(db, false)
+		GenerateAttendee(db, false)
 	case "reload_orders":
 		GenerateOrderPayments(db, true)
 	case "reload_attendees":
