@@ -8,10 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/code-mobi/kumareport/wp"
-
+	"github.com/code-mobi/kumareport/data"
 	"github.com/dustin/go-humanize"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -157,20 +155,19 @@ func LoginHandler(c *gin.Context) {
 		log.Println("Form Error")
 	} else {
 		db, _ := OpenDB()
-		var user wp.WpUser
+		var user data.WpUser
 		if formLogin.Login != "" && formLogin.Password != "" {
 			db.Where("user_login = ? OR user_email = ?", formLogin.Login, formLogin.Login).First(&user)
-			log.Printf("%v", user)
-			if user.ID != 0 {
-				if PortableHashCheck(formLogin.Password, user.UserPass) {
+			user, err = data.UserByLogin(formLogin.Login)
+			if err != nil {
+				errorMsg = "Incorrect username or password."
+			} else {
+				if data.PasswordHashCheck(formLogin.Password, user.UserPass) {
 					errorMsg = "Login Success"
 				} else {
 					errorMsg = "Incorrect password"
 				}
-			} else {
-				errorMsg = "Incorrect username or password."
 			}
-
 		}
 	}
 

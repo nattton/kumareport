@@ -4,15 +4,6 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-type WpUser struct {
-	ID           int `gorm:"primary_key;column:ID"`
-	UserLogin    string
-	UserPass     string
-	UserNicename string
-	UserEmail    string
-	DisplayName  string
-}
-
 type WpPost struct {
 	ID         int `gorm:"primary_key;column:ID"`
 	PostDate   string
