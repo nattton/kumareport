@@ -1,11 +1,18 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/gin-gonic/gin"
+)
 
 func runServer() {
 	router := gin.New()
 	router.Use(gin.Logger())
-	router.LoadHTMLGlob("templates/*")
+
+	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	router.LoadHTMLGlob(dir + "/templates/*")
 
 	authorized := router.Group("/")
 	authorized.Use(gin.BasicAuth(gin.Accounts{
