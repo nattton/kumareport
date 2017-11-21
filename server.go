@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,8 +9,7 @@ import (
 func runServer() {
 	router := gin.New()
 	router.Use(gin.Logger())
-
-	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, _ := os.Getwd()
 	router.LoadHTMLGlob(dir + "/templates/*")
 
 	authorized := router.Group("/")
