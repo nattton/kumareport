@@ -7,9 +7,6 @@ func runServer() {
 	router.Use(gin.Logger())
 	router.LoadHTMLGlob("templates/*")
 
-	router.GET("/login", LoginHandler)
-	router.POST("/login", LoginHandler)
-
 	authorized := router.Group("/")
 	authorized.Use(gin.BasicAuth(gin.Accounts{
 		"kumamon": "kumakuma555",
@@ -40,6 +37,9 @@ func runServer() {
 	{
 		api.GET("/attendees", ApiAttendeesHandler)
 	}
+
+	router.GET("/login", LoginHandler)
+	router.POST("/login", LoginHandler)
 
 	router.Run(":3000")
 }
