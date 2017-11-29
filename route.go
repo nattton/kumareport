@@ -13,27 +13,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func IndexHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
+func (app *App) IndexHandler(c *gin.Context) {
 	var orderCount int64
-	db.Model(&OrderPayment{}).Count(&orderCount)
+	app.db.Model(&OrderPayment{}).Count(&orderCount)
 
 	var attendeeTotal int64
-	db.Model(&Attendee{}).Count(&attendeeTotal)
+	app.db.Model(&Attendee{}).Count(&attendeeTotal)
 	var orderTotal int64
-	row := db.Table("order_payments").Select("SUM(order_total)").Row()
+	row := app.db.Table("order_payments").Select("SUM(order_total)").Row()
 	row.Scan(&orderTotal)
 
-	shirtSizes := GetShirtSizeAmount(db)
-	skus := GetSkuAmount(db)
+	shirtSizes := GetShirtSizeAmount(app.db)
+	skus := GetSkuAmount(app.db)
 
 	var orderPayments []OrderPayment
-	db.Order("payment_date_time desc").Limit(10).Find(&orderPayments)
+	app.db.Order("payment_date_time desc").Limit(10).Find(&orderPayments)
 
 	var attendees []Attendee
-	db.Order("id desc").Limit(10).Find(&attendees)
+	app.db.Order("id desc").Limit(10).Find(&attendees)
 
 	c.HTML(http.StatusOK, "home.tmpl", gin.H{
 		"attendeeTotal": fmt.Sprintf("%s", humanize.Comma(attendeeTotal)),
@@ -46,82 +43,88 @@ func IndexHandler(c *gin.Context) {
 	})
 }
 
-func NotFoundHandler(c *gin.Context, message string) {
+func (app *App) NotFoundHandler(c *gin.Context, message string) {
 	c.HTML(http.StatusNotFound, "not_found.tmpl", gin.H{
 		"message": message,
 	})
 }
 
-func ReloadDataHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	GenerateOrderPayments(db, false)
-	GenerateAttendee(db, false)
+func (app *App) ReloadDataHandler(c *gin.Context) {
+	GenerateOrderPayments(app.db, false)
+	GenerateAttendee(app.db, false)
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
-func OrdersDownloadHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	StreamCSVFile(c, GetOrdersCSV(db), GetFileNameNow("orders"))
+func (app *App) OrdersDownloadHandler(c *gin.Context) {
+	StreamCSVFile(c, GetOrdersCSV(app.db), GetFileNameNow("orders"))
 }
 
-func OrderPaymentsDownloadHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	StreamCSVFile(c, GetOrderPaymentsCSV(db), GetFileNameNow("order_payment"))
+func (app *App) OrderPaymentsDownloadHandler(c *gin.Context) {
+	StreamCSVFile(c, GetOrderPaymentsCSV(app.db), GetFileNameNow("order_payment"))
 }
 
-func OrderPaymentsReloadHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	GenerateOrderPayments(db, true)
+func (app *App) OrderPaymentsReloadHandler(c *gin.Context) {
+	GenerateOrderPayments(app.db, true)
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
-func AttendeesHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
+func (app *App) AttendeesHandler(c *gin.Context) {
 	var attendees []Attendee
-	db.Find(&attendees)
+	app.db.Find(&attendees)
 
 	c.HTML(http.StatusOK, "attendees.tmpl", gin.H{
 		"attendees": attendees,
 	})
 }
 
-func AttendeesDownloadHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	StreamCSVFile(c, GetAttendeesCSV(db), GetFileNameNow("attendee"))
+func (app *App) AttendeesDownloadHandler(c *gin.Context) {
+	StreamCSVFile(c, GetAttendeesCSV(app.db), GetFileNameNow("attendee"))
 }
 
-func AttendeesReloadAllHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	GenerateAttendee(db, true)
+func (app *App) AttendeesReloadAllHandler(c *gin.Context) {
+	GenerateAttendee(app.db, true)
 	c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 
-func ShirtSizeHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
+func (app *App) ShirtSizeHandler(c *gin.Context) {
 
-	StreamCSVFile(c, GetShirtSizeCsv(db), GetFileNameNow("shirt_size"))
+	StreamCSVFile(c, GetShirtSizeCsv(app.db), GetFileNameNow("shirt_size"))
 }
 
-func ReCheckOnHoldHandler(c *gin.Context) {
-	db, _ := OpenDB()
-	defer db.Close()
+func (app *App) ReCheckOnHoldHandler(c *gin.Context) {
+	ReCheckOnHold(app.db)
+}
 
-	ReCheckOnHold(db)
+func (app *App) LoginHandler(c *gin.Context) {
+	type FormLogin struct {
+		Login    string `form:"login" json:"user" binding:"required"`
+		Password string `form:"password" json:"password" binding:"required"`
+	}
+	var formLogin FormLogin
+	var errorMsg string
+	if err := c.ShouldBind(&formLogin); err != nil {
+		log.Println("Form Error")
+	} else {
+		var user data.WpUser
+		if formLogin.Login != "" && formLogin.Password != "" {
+			app.db.Where("user_login = ? OR user_email = ?", formLogin.Login, formLogin.Login).First(&user)
+			user, err = data.UserByLogin(app.db, formLogin.Login)
+			if err != nil {
+				errorMsg = "Incorrect username or password."
+			} else {
+				log.Printf("%v", user)
+				if data.PasswordHashCheck(formLogin.Password, user.UserPass) {
+					errorMsg = "Login Success"
+				} else {
+					errorMsg = "Incorrect password"
+				}
+			}
+		}
+	}
+
+	c.HTML(http.StatusOK, "login.tmpl", gin.H{
+		"error": errorMsg,
+	})
 }
 
 func StreamCSVFile(c *gin.Context, csvData [][]string, fileName string) {
@@ -142,36 +145,4 @@ func GetFileNameNow(filename string) string {
 	loc, _ := time.LoadLocation("Asia/Bangkok")
 	t := time.Now().In(loc)
 	return fmt.Sprintf("%s-%s", filename, t.Format("2006-01-02_15-04"))
-}
-
-func LoginHandler(c *gin.Context) {
-	type FormLogin struct {
-		Login    string `form:"login" json:"user" binding:"required"`
-		Password string `form:"password" json:"password" binding:"required"`
-	}
-	var formLogin FormLogin
-	var errorMsg string
-	if err := c.ShouldBind(&formLogin); err != nil {
-		log.Println("Form Error")
-	} else {
-		db, _ := OpenDB()
-		var user data.WpUser
-		if formLogin.Login != "" && formLogin.Password != "" {
-			db.Where("user_login = ? OR user_email = ?", formLogin.Login, formLogin.Login).First(&user)
-			user, err = data.UserByLogin(formLogin.Login)
-			if err != nil {
-				errorMsg = "Incorrect username or password."
-			} else {
-				if data.PasswordHashCheck(formLogin.Password, user.UserPass) {
-					errorMsg = "Login Success"
-				} else {
-					errorMsg = "Incorrect password"
-				}
-			}
-		}
-	}
-
-	c.HTML(http.StatusOK, "login.tmpl", gin.H{
-		"error": errorMsg,
-	})
 }

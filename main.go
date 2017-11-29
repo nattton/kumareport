@@ -1,19 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 
+	"github.com/code-mobi/kumareport/anypay"
 	"github.com/code-mobi/kumareport/wp"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 )
-
-const authKey = "bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1bmlxdWVfbmFtZSI6ImY3MTgyM2UzLWJhOGMtNGMwNi05ODkzLTA0MDgzMzJhNDA1NSIsInN1YiI6ImJvb2t6eUBhbnlwYXkuY28udGgiLCJlbWFpbCI6ImJvb2t6eUBhbnlwYXkuY28udGgiLCJyb2xlIjoiQU5ZUEFfV0VCIiwiaXNzIjoiYXV0aC5hbnlwYXkuY28udGgiLCJhdWQiOiI2ODViZDg0MmY3ZDQ0NmU2OWY4Yjc4ZTY0MzJjNzY3OCIsImV4cCI6MTUxNTUzNDYxNCwibmJmIjoxNTEwMzUwNjE0fQ.M7CB3T2PmzT2L9laT2m-8WiJpHCD1RcqEvv0SoepT6Q"
 
 // const databaseDSN = "root:root@tcp(127.0.0.1:8889)/wordpress?parseTime=true"
 const databaseDSN = "mybookzy:ZasSaMi&ZasSaMi@tcp(52.187.124.136:3306)/bookzywpdb?charset=utf8&parseTime=true"
@@ -41,7 +38,7 @@ func main() {
 }
 
 func processCommand(cmd string) {
-	db, _ := OpenDB()
+	db := OpenDB()
 	defer db.Close()
 	switch cmd {
 	case "reload_data":
@@ -66,16 +63,14 @@ func ReCheckProcessing(db *gorm.DB) {
 	for _, post := range posts {
 		postMeta := GetPostMetaOrder(db, post.ID)
 		refID := postMeta["_order_key"]
-		status := GetPaymentStatus(refID)
+		status, err := anypay.GetPaymentStatus(refID)
 
-		if status.TotalRow != 1 {
-			log.Panicf("######### RefID = %s , TotalRow = %d", refID, status.TotalRow)
+		if err != nil {
+			log.Panicf("######### RefID = %s", refID)
 		}
 
-		statusRow := status.DataRow[0]
-
-		logMessage := fmt.Sprintf("RefID = %s , PaymentCode = %s , PaymentMessage = %s , PaymentType = %s , PaymentDateTime = %s", refID, statusRow.PaymentCode, statusRow.PaymentMessage, statusRow.PaymentType, statusRow.PaymentDateTime)
-		if statusRow.PaymentCode != "1" {
+		logMessage := fmt.Sprintf("RefID = %s , PaymentCode = %s , PaymentMessage = %s , PaymentType = %s , PaymentDateTime = %s", refID, status.PaymentCode, status.PaymentMessage, status.PaymentType, status.PaymentDateTime)
+		if status.PaymentCode != "1" {
 			log.Panic("######### " + logMessage)
 		} else {
 			log.Println(logMessage)
@@ -102,32 +97,4 @@ func ReCheckOnHold(db *gorm.DB) {
 		defer resp.Body.Close()
 		log.Println(resp.Status)
 	}
-}
-
-func GetPaymentStatus(refID string) PaymentStatus {
-	body := callAnypay(fmt.Sprintf("/payment/status2?RefId=%s", refID))
-	var status PaymentStatus
-	err := json.Unmarshal(body, &status)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return status
-}
-
-func callAnypay(apiPath string) []byte {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.anypay.co.th%s", apiPath), nil)
-	req.Header.Set("Authorization", authKey)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
-	}
-	defer resp.Body.Close()
-	log.Println(resp.Status)
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-	}
-	return body
 }

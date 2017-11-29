@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/code-mobi/kumareport/anypay"
 	"github.com/code-mobi/kumareport/wp"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -20,36 +21,35 @@ type Order struct {
 	Lastname      string
 	Phone         string
 	Email         string
-	PaymentStatus PaymentStatus
-	OrderItems    []OrderItem
-	Attendees     []Attendee
+	PaymentStatus anypay.PaymentStatus
+	OrderItems    OrderItems
+	Attendees     Attendees
 }
 
 type OrderItem struct {
 	ID        int
 	Name      string
 	Type      string
-	Qty       int
+	Qty       string
 	LineTotal float64
 }
 
-func OrdersHandler(c *gin.Context) {
-	q := c.Query("q")
+type OrderItems []*OrderItem
 
-	db, _ := OpenDB()
-	defer db.Close()
+func (app *App) OrdersHandler(c *gin.Context) {
+	q := c.Query("q")
 
 	orders := []Order{}
 	if q != "" {
-		rows, err := db.Raw("SELECT post_id FROM wp_postmeta WHERE post_id = ? OR (meta_key IN('_shipping_first_name', '_shipping_last_name', '_billing_phone') AND meta_value = ?) GROUP BY post_id", q, q).Rows()
+		rows, err := app.db.Raw("SELECT post_id FROM wp_postmeta WHERE post_id = ? OR (meta_key IN('_shipping_first_name', '_shipping_last_name', '_billing_phone') AND meta_value = ?) GROUP BY post_id", q, q).Rows()
 		defer rows.Close()
 
 		for rows.Next() {
 			var orderID int
 			rows.Scan(&orderID)
 			var post wp.WpPost
-			db.First(&post, orderID)
-			postMeta := GetPostMetaOrder(db, orderID)
+			app.db.First(&post, orderID)
+			postMeta := GetPostMetaOrder(app.db, orderID)
 			orderTotal, _ := strconv.ParseFloat(postMeta["_order_total"], 64)
 			order := Order{
 				OrderID:    orderID,
@@ -63,7 +63,7 @@ func OrdersHandler(c *gin.Context) {
 			orders = append(orders, order)
 		}
 		if err != nil {
-			NotFoundHandler(c, err.Error())
+			app.NotFoundHandler(c, err.Error())
 			return
 		}
 
@@ -72,28 +72,25 @@ func OrdersHandler(c *gin.Context) {
 		})
 	} else {
 		var orderPayments []OrderPayment
-		db.Order("payment_date_time desc").Find(&orderPayments)
+		app.db.Order("payment_date_time desc").Find(&orderPayments)
 		c.HTML(http.StatusOK, "order_payments.tmpl", gin.H{
 			"orderPayments": orderPayments,
 		})
 	}
 }
 
-func OrderHandler(c *gin.Context) {
+func (app *App) OrderHandler(c *gin.Context) {
 	id := c.Param("id")
 	orderID, err := strconv.Atoi(id)
-
-	db, _ := OpenDB()
-	defer db.Close()
 
 	if err != nil {
 		c.HTML(http.StatusNotFound, "order.tmpl", gin.H{})
 		return
 	}
 
-	order, err := GetOrder(db, orderID)
+	order, err := GetOrder(app.db, orderID)
 	if err != nil {
-		NotFoundHandler(c, err.Error())
+		app.NotFoundHandler(c, err.Error())
 		return
 	}
 
@@ -120,7 +117,7 @@ func GetOrder(db *gorm.DB, orderID int) (Order, error) {
 	order.Lastname = orderMeta["_shipping_last_name"]
 	order.Phone = orderMeta["_billing_phone"]
 	order.Email = orderMeta["_billing_email"]
-	order.PaymentStatus = GetPaymentStatus(order.RefID)
+	order.PaymentStatus, _ = anypay.GetPaymentStatus(order.RefID)
 	order.OrderItems = GetOrderItem(db, order.OrderID)
 	order.Attendees = GetAttendees(db, order.OrderID)
 	return order, nil

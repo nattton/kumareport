@@ -22,7 +22,6 @@ type Product struct {
 }
 
 func RetrieveProducts(db *gorm.DB) {
-	db.AutoMigrate(&Product{})
 	model := NewModel(db)
 	var posts []wp.WpPost
 	db.Where("post_type = 'product_variation' AND post_status= 'publish'").Order("menu_order").Find(&posts)

@@ -9,9 +9,7 @@ import (
 )
 
 func GenerateOrderPayments(db *gorm.DB, forceUpdate bool) {
-	db.AutoMigrate(&OrderPayment{})
-
-	posts := []wp.WpPost{}
+	posts := wp.WpPosts{}
 	db.Where("post_status = 'wc-processing' AND post_type = 'shop_order'").Find(&posts)
 	m := NewModel(db)
 	if len(posts) > 0 {
@@ -30,7 +28,7 @@ func GenerateOrderPayments(db *gorm.DB, forceUpdate bool) {
 }
 
 func GetOrderPaymentsCSV(db *gorm.DB) [][]string {
-	orderPayments := []OrderPayment{}
+	orderPayments := OrderPayments{}
 	db.Order("payment_date_time").Find(&orderPayments)
 	csvData := [][]string{{
 		"OrderID",
@@ -76,7 +74,7 @@ func GetOrderPaymentsCSV(db *gorm.DB) [][]string {
 }
 
 func GetOrdersCSV(db *gorm.DB) [][]string {
-	orderPayments := []OrderPayment{}
+	orderPayments := OrderPayments{}
 	db.Order("order_id").Find(&orderPayments)
 	csvData := [][]string{{
 		"OrderID",
@@ -171,7 +169,7 @@ func GetOrdersCSV(db *gorm.DB) [][]string {
 }
 
 func GetAttendeesCSV(db *gorm.DB) [][]string {
-	attendees := []Attendee{}
+	attendees := Attendees{}
 	db.Find(&attendees)
 	csvData := [][]string{{
 		"ID",
@@ -208,19 +206,27 @@ func GetAttendeesCSV(db *gorm.DB) [][]string {
 	return csvData
 }
 
-func GetOrderItem(db *gorm.DB, orderID int) []OrderItem {
-	orderItems := []OrderItem{}
-	wpOrderItems := []wp.WpWoocommerceOrderItem{}
-	db.Where("order_item_type = 'line_item' AND order_id = ?", orderID).Find(&wpOrderItems)
+func GetOrderItem(db *gorm.DB, orderID int) OrderItems {
+	orderItems := OrderItems{}
+	wpOrderItems := wp.WpWoocommerceOrderItems{}
+	db.Where("order_item_type IN ('line_item','shipping') AND order_id = ?", orderID).Find(&wpOrderItems)
 	for _, wpOrderItem := range wpOrderItems {
 		orderItemmeta := wp.GetOrderItemmeta(db, wpOrderItem.OrderItemID)
-		qty, _ := strconv.Atoi(orderItemmeta["_qty"])
-		lineTotal, _ := strconv.ParseFloat(orderItemmeta["_line_total"], 64)
-		orderItem := OrderItem{
-			ID:        wpOrderItem.OrderItemID,
-			Name:      wpOrderItem.OrderItemName,
-			Qty:       qty,
-			LineTotal: lineTotal,
+		orderItem := &OrderItem{}
+		switch wpOrderItem.OrderItemType {
+		case "line_item":
+			lineTotal, _ := strconv.ParseFloat(orderItemmeta["_line_total"], 64)
+			orderItem.ID = wpOrderItem.OrderItemID
+			orderItem.Name = wpOrderItem.OrderItemName
+			orderItem.Qty = orderItemmeta["_qty"]
+			orderItem.LineTotal = lineTotal
+
+		case "shipping":
+			cost, _ := strconv.ParseFloat(orderItemmeta["cost"], 64)
+			orderItem.ID = wpOrderItem.OrderItemID
+			orderItem.Name = wpOrderItem.OrderItemName
+			orderItem.Qty = ""
+			orderItem.LineTotal = cost
 		}
 		orderItems = append(orderItems, orderItem)
 	}

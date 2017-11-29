@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
+	"github.com/code-mobi/kumareport/anypay"
 	"github.com/code-mobi/kumareport/wp"
 	"github.com/jinzhu/gorm"
 )
@@ -32,6 +34,8 @@ type OrderPayment struct {
 	ShippingPostcode   string //_shipping_postcode
 }
 
+type OrderPayments []*OrderPayment
+
 func GetPostMetaOrderPayment(db *gorm.DB, postID int) OrderPayment {
 	postMeta := make(map[string]string)
 	postMetas := []wp.WpPostmeta{}
@@ -43,15 +47,11 @@ func GetPostMetaOrderPayment(db *gorm.DB, postID int) OrderPayment {
 	}
 
 	refID := postMeta["_order_key"]
-	paymentStatus := GetPaymentStatus(refID)
-	var paymentType, paymentDateTime string
-	var paymentAmount float64
-	if paymentStatus.TotalRow == 1 {
-		statusRow := paymentStatus.DataRow[0]
-		paymentType = statusRow.PaymentType
-		paymentAmount, _ = strconv.ParseFloat(statusRow.PaymentAmount, 64)
-		paymentDateTime = statusRow.PaymentDateTime
+	paymentStatus, err := anypay.GetPaymentStatus(refID)
+	if err != nil {
+		log.Println(err)
 	}
+	paymentAmount, _ := strconv.ParseFloat(paymentStatus.PaymentAmount, 64)
 	orderTotal, _ := strconv.ParseFloat(postMeta["_order_total"], 64)
 
 	order := OrderPayment{
@@ -62,15 +62,15 @@ func GetPostMetaOrderPayment(db *gorm.DB, postID int) OrderPayment {
 		Phone:            postMeta["_billing_phone"],
 		Email:            postMeta["_billing_email"],
 		OrderTotal:       orderTotal,
-		PaymentType:      paymentType,
-		PaymentDateTime:  paymentDateTime,
+		PaymentType:      paymentStatus.PaymentType,
+		PaymentDateTime:  paymentStatus.PaymentDateTime,
 		PaymentAmount:    paymentAmount,
 		ShippingCompany:  postMeta["_shipping_company"],
 		ShippingPostcode: postMeta["_shipping_postcode"],
 	}
 	order.ShippingAddress = fmt.Sprintf("%s %s %s %s %s %s", postMeta["_shipping_address_1"], postMeta["_shipping_address_2"], postMeta["_shipping_city"], GetThailandState()[postMeta["_shipping_state"]], postMeta["_shipping_postcode"], postMeta["_shipping_country"])
 
-	order.CalulateOrderPayment(paymentType)
+	order.CalulateOrderPayment(paymentStatus.PaymentType)
 	return order
 }
 

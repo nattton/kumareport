@@ -41,43 +41,42 @@ type Attendee struct {
 	ShirtSize    string
 }
 
-func AttendeeHandler(c *gin.Context) {
+type Attendees []*Attendee
+
+func (app *App) AttendeeHandler(c *gin.Context) {
 	id := c.Param("id")
 	attendeeID, err := strconv.Atoi(id)
 	if err != nil {
-		NotFoundHandler(c, err.Error())
+		app.NotFoundHandler(c, err.Error())
 	}
-	db, _ := OpenDB()
-	defer db.Close()
 
-	m := NewModel(db)
+	m := NewModel(app.db)
 	m.RetieveTickets()
-	attendee := GetAttendee(db, m, attendeeID)
+	attendee := GetAttendee(app.db, m, attendeeID)
 	c.HTML(http.StatusOK, "attendee.tmpl", gin.H{
 		"attendee":    attendee,
 		"ticketTypes": m.ticketTypes,
 	})
 }
 
-func AttendeeUpdateHandler(c *gin.Context) {
+func (app *App) AttendeeUpdateHandler(c *gin.Context) {
 	id := c.Param("id")
 	var formA Attendee
 	if err := c.ShouldBind(&formA); err != nil {
-		NotFoundHandler(c, err.Error())
+		app.NotFoundHandler(c, err.Error())
 		return
 	}
 	if id != strconv.Itoa(formA.ID) {
-		NotFoundHandler(c, "Bad Request")
+		app.NotFoundHandler(c, "Bad Request")
 		return
 	}
 
-	db, _ := OpenDB()
-	m := NewModel(db)
+	m := NewModel(app.db)
 	m.RetieveTickets()
 	var wpAttendee wp.WpPost
-	db.First(&wpAttendee, formA.ID)
+	app.db.First(&wpAttendee, formA.ID)
 	if formA.ID != wpAttendee.ID || wpAttendee.PostType != "tc_tickets_instances" {
-		NotFoundHandler(c, "Not Found")
+		app.NotFoundHandler(c, "Not Found")
 		return
 	}
 
@@ -96,15 +95,15 @@ func AttendeeUpdateHandler(c *gin.Context) {
 	for key := range formMaps {
 		formKeys = append(formKeys, key)
 	}
-	attendeeMeta := wp.GetPostMetaFields(db, formA.ID, formKeys)
+	attendeeMeta := wp.GetPostMetaFields(app.db, formA.ID, formKeys)
 	for metaKey, metaValue := range formMaps {
 		if attendeeMeta[metaKey] != metaValue {
-			UpdatePostMeta(db, formA.ID, metaKey, metaValue)
+			UpdatePostMeta(app.db, formA.ID, metaKey, metaValue)
 		}
 	}
 
-	attendee := GetAttendee(db, m, formA.ID)
-	db.Save(&attendee)
+	attendee := GetAttendee(app.db, m, formA.ID)
+	app.db.Save(&attendee)
 
 	c.HTML(http.StatusOK, "attendee.tmpl", gin.H{
 		"attendee":    attendee,
@@ -129,8 +128,6 @@ func UpdatePostMeta(db *gorm.DB, postID int, metaKey string, metaValue string) {
 }
 
 func GenerateAttendee(db *gorm.DB, forceUpdate bool) {
-	db.AutoMigrate(&Attendee{})
-
 	m := NewModel(db)
 	m.RetieveTickets()
 	m.RetieveAttendee()
@@ -158,20 +155,18 @@ func GenerateAttendee(db *gorm.DB, forceUpdate bool) {
 func UpdateAttendee(db *gorm.DB, wg *sync.WaitGroup, throttle chan int, m *Model, post wp.WpPost, attendeeID int, forceUpdate bool) {
 	defer wg.Done()
 	attendee := m.GetAttendee(attendeeID)
+	newAttendee := GetAttendee(db, m, attendeeID)
+	newAttendee.OrderID = post.ID
 	if attendee.ID != attendeeID {
-		attendee = GetAttendee(db, m, attendeeID)
-		attendee.OrderID = post.ID
-		db.Create(&attendee)
+		db.Create(&newAttendee)
 	} else if forceUpdate {
-		attendee = GetAttendee(db, m, attendeeID)
-		attendee.OrderID = post.ID
-		db.Save(&attendee)
+		db.Save(&newAttendee)
 	}
 	<-throttle
 }
 
-func GetAttendees(db *gorm.DB, orderID int) []Attendee {
-	attendees := []Attendee{}
+func GetAttendees(db *gorm.DB, orderID int) Attendees {
+	attendees := Attendees{}
 	m := NewModel(db)
 	m.RetieveAttendee()
 	var metaTickets []wp.WpPostmeta
@@ -182,14 +177,8 @@ func GetAttendees(db *gorm.DB, orderID int) []Attendee {
 	return attendees
 }
 
-func GetAttendee(db *gorm.DB, m *Model, attendeeID int) Attendee {
-	var attendee Attendee
-	db.First(&attendee, attendeeID)
-	if attendee.ID != attendeeID {
-		attendee.ID = attendeeID
-	}
-
-	attendee = GetPostMetaAttendee(db, attendeeID)
+func GetAttendee(db *gorm.DB, m *Model, attendeeID int) *Attendee {
+	attendee := GetPostMetaAttendee(db, attendeeID)
 	ticketType := m.GetProduct(attendee.TicketTypeID)
 	attendee.Sku = ticketType.Sku
 	orderID, _ := strconv.Atoi(strings.Split(attendee.TicketCode, "-")[0])

@@ -12,8 +12,8 @@ import (
 
 const kCacheApiAttendees = "api_attendee"
 
-func ApiAttendeesHandler(c *gin.Context) {
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "https://kumarathonbkk.bookzy.co.th")
+func (app *App) ApiAttendeesHandler(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "https://*.bookzy.co.th")
 	type Attendee struct {
 		ID        int
 		OrderID   int
@@ -25,8 +25,7 @@ func ApiAttendeesHandler(c *gin.Context) {
 	redisClient := OpenRedis()
 	results, err := redisClient.Get(kCacheApiAttendees).Result()
 	if err != nil || err == redis.Nil {
-		db, _ := OpenDB()
-		db.Raw("SELECT id, order_id, firstname, lastname, sku item_name FROM attendees ORDER BY order_id, id").Scan(&attendees)
+		app.db.Raw("SELECT id, order_id, firstname, lastname, sku item_name FROM attendees ORDER BY order_id, id").Scan(&attendees)
 		c.JSON(http.StatusOK, attendees)
 
 		b, err := json.Marshal(attendees)

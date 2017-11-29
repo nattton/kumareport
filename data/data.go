@@ -4,21 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-
-	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
-
-var Db *gorm.DB
-
-func init() {
-	databaseDSN := "mybookzy:ZasSaMi&ZasSaMi@tcp(52.187.124.136:3306)/bookzywpdb?charset=utf8&parseTime=true"
-	Db, err := gorm.Open("mysql", databaseDSN)
-	if err != nil {
-		log.Panic(err)
-	}
-	Db.LogMode(gin.Mode() == "debug")
-}
 
 func createUUID() (uuid string) {
 	u := new([16]byte)

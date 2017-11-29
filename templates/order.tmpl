@@ -22,15 +22,13 @@
 </div>
 
 <h3>Payment Status</h3>
-{{range .order.PaymentStatus.DataRow}}
-      <div class="row">
-            <div class="col-sm-2">PaymentMessage</div>
-            <div class="col-sm-10">{{.PaymentMessage}}</div>
-            <div class="col-sm-2">PaymentType</div><div class="col-sm-10">{{.PaymentType}}</div>
-            <div class="col-sm-2">PaymentAmount</div><div class="col-sm-10">{{.PaymentAmount}}</div>
-            <div class="col-sm-2">PaymentDateTime</div><div class="col-sm-10">{{.PaymentDateTime}}</div>
-      </div>
-{{end}}
+<div class="row">
+      <div class="col-sm-2">PaymentMessage</div>
+      <div class="col-sm-10">{{.order.PaymentStatus.PaymentMessage}}</div>
+      <div class="col-sm-2">PaymentType</div><div class="col-sm-10">{{.order.PaymentStatus.PaymentType}}</div>
+      <div class="col-sm-2">PaymentAmount</div><div class="col-sm-10">{{.order.PaymentStatus.PaymentAmount}}</div>
+      <div class="col-sm-2">PaymentDateTime</div><div class="col-sm-10">{{.order.PaymentStatus.PaymentDateTime}}</div>
+</div>
 
 <h3>Order Items</h3>
 <div class="row">
