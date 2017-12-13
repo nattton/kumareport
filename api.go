@@ -20,12 +20,13 @@ func (app *App) ApiAttendeesHandler(c *gin.Context) {
 		Firstname string
 		Lastname  string
 		ItemName  string
+		EMS       string
 	}
 	var attendees []Attendee
 	redisClient := OpenRedis()
 	results, err := redisClient.Get(kCacheApiAttendees).Result()
 	if err != nil || err == redis.Nil {
-		app.db.Raw("SELECT id, order_id, firstname, lastname, sku item_name FROM attendees ORDER BY order_id, id").Scan(&attendees)
+		app.db.Raw("SELECT id, order_id, firstname, lastname, sku item_name, ems FROM attendees ORDER BY order_id, id").Scan(&attendees)
 		c.JSON(http.StatusOK, attendees)
 
 		b, err := json.Marshal(attendees)

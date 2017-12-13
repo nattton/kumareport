@@ -53,3 +53,12 @@ func ImportStock(db *gorm.DB) {
 		db.Exec("UPDATE products SET stock= ? WHERE sku=?", line[1], line[0])
 	}
 }
+
+func ImportEMS(db *gorm.DB) {
+	lines := ReadCSV("ems.csv")
+	fmt.Print(lines)
+	for _, line := range lines[1:] {
+		log.Println(line[1], line[0])
+		db.Exec("UPDATE attendees SET ems = ? WHERE order_id=?", line[1], line[0])
+	}
+}

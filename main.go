@@ -52,6 +52,8 @@ func processCommand(cmd string) {
 		RetrieveProducts(db)
 	case "import_stock":
 		ImportStock(db)
+	case "import_ems":
+		ImportEMS(db)
 	default:
 		log.Println("cmd not found")
 	}

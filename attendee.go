@@ -39,6 +39,7 @@ type Attendee struct {
 	Address      string //_tcfn_207
 	Sku          string
 	ShirtSize    string
+	EMS          string
 }
 
 type Attendees []*Attendee
