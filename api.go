@@ -13,7 +13,7 @@ import (
 const kCacheApiAttendees = "api_attendee"
 
 func (app *App) ApiAttendeesHandler(c *gin.Context) {
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*.bookzy.co.th")
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "https://kumarathonbkk.bookzy.co.th")
 	type Attendee struct {
 		ID        int
 		OrderID   int
