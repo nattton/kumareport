@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/code-mobi/kumareport/anypay"
 	"github.com/code-mobi/kumareport/wp"
@@ -12,17 +13,21 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// const databaseDSN = "root:root@tcp(127.0.0.1:8889)/wordpress?parseTime=true"
-const databaseDSN = "mybookzy:ZasSaMi&ZasSaMi@tcp(52.187.124.136:3306)/bookzywpdb?charset=utf8&parseTime=true"
 const (
 	maxConcurrency = 8
 )
 
 var throttle = make(chan int, maxConcurrency)
 
-var cmd string
+var (
+	cmd     string
+	htmlDir string
+	dsn     string
+)
 
 func init() {
+	flag.StringVar(&dsn, "dsn", os.Getenv("KUMA_DSN"), "Database DSN")
+	flag.StringVar(&htmlDir, "html-dir", os.Getenv("GOPATH")+"/src/github.com/code-mobi/kumareport/templates", "Path to static assets")
 	flag.StringVar(&cmd, "cmd", "", `reload_data
 	reload_attendees
 	reload_order_payment`)

@@ -2,11 +2,9 @@ package main
 
 import (
 	"log"
-	"os"
-
-	"github.com/jinzhu/gorm"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 type App struct {
@@ -19,8 +17,7 @@ func runServer() {
 	app := &App{db}
 	router := gin.New()
 	router.Use(gin.Logger())
-	dir, _ := os.Getwd()
-	router.LoadHTMLGlob(dir + "/templates/*")
+	router.LoadHTMLGlob(htmlDir + "/*")
 
 	authorized := router.Group("/")
 	authorized.Use(gin.BasicAuth(gin.Accounts{
@@ -60,7 +57,7 @@ func runServer() {
 }
 
 func OpenDB() *gorm.DB {
-	db, err := gorm.Open("mysql", databaseDSN)
+	db, err := gorm.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
